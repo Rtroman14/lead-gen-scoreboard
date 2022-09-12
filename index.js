@@ -12,7 +12,11 @@ const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
             "Text - workflow"
         );
 
-        const clientAccounts = _.uniqueArrayOfObjects(workflows, ["Account", "Tag"]);
+        const liveWorkflows = workflows.filter(
+            (workflow) => workflow["Campaign Status"] !== "Paused"
+        );
+
+        const clientAccounts = _.uniqueArrayOfObjects(liveWorkflows, ["Account", "Tag"]);
 
         const airtableFormatedRecords = Airtable.formatRecords(
             clientAccounts.map((record) => ({
