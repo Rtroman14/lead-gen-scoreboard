@@ -6,68 +6,92 @@ const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
 
 (async () => {
     try {
-        const workflows = await Airtable.recordsInView(
+        const workflowsReq = Airtable.recordsInView(
             LEAD_GEN_TRACKER,
             "Campaigns",
             "Text - workflow"
         );
+        const scoreboardReq = Airtable.allRecords(LEAD_GEN_TRACKER, "Scoreboard");
+        let [workflows, scoreboard] = await Promise.all([workflowsReq, scoreboardReq]);
 
-        const liveWorkflows = workflows.filter(
-            (workflow) => workflow["Campaign Status"] !== "Paused"
-        );
+        workflows = workflows.filter((workflow) => workflow["Campaign Status"] !== "Paused");
+        workflows = _.uniqueArrayOfObjects(workflows, ["Account", "Tag"]);
 
-        const clientAccounts = _.uniqueArrayOfObjects(liveWorkflows, ["Account", "Tag"]);
-
-        const airtableFormatedRecords = Airtable.formatRecords(
-            clientAccounts.map((record) => ({
-                Account: record.Account,
-                Client: record.Client,
-                Tag: record.Tag || "",
-                "Base ID": record["Base ID"],
-            }))
-        );
-
-        let scoreboard = await Airtable.recordsInView(LEAD_GEN_TRACKER, "Scoreboard", "Scoreboard");
-
-        const scoreboardRecordIDs = scoreboard.map((record) => record.recordID);
-        if (scoreboardRecordIDs.length) {
-            await Airtable.batchDelete(LEAD_GEN_TRACKER, scoreboardRecordIDs);
-        }
-
-        scoreboard = await Airtable.batchUpload(
-            LEAD_GEN_TRACKER,
-            "Scoreboard",
-            airtableFormatedRecords
-        );
-
-        const accountStatsReq = clientAccounts.map((account) => accountStats(account));
-
+        // * get all account stats
+        const accountStatsReq = workflows.map((account) => accountStats(account));
         const accountStatsRes = await Promise.all(accountStatsReq);
 
-        for (let accountStat of accountStatsRes) {
-            // const scoreboardRecord = scoreboard.find((account) => {
-            //     // let name = `${account.Account} - `;
-            //     // if ("Tag" in account) {
-            //     //     name = `${account.Account} - ${account.Tag}`;
-            //     // }
+        // * batch delete type === "Campaign"
+        const scoreboardCampaignRecordIDs = scoreboard
+            .filter((record) => record.Type === "Campaign")
+            .map((record) => record.recordID);
+        if (scoreboardCampaignRecordIDs.length) {
+            await Airtable.batchDelete(LEAD_GEN_TRACKER, scoreboardCampaignRecordIDs);
+        }
 
-            //     // let accountStatsName = `${accountStat.account} - ${accountStat.tag}`;
-            //     // if (name === accountStatsName) {
-            //     //     return account;
-            //     // }
-            //     if (account.Account === accountStat.account) {
-            //         return account;
-            //     }
-            // });
-            const scoreboardRecord = scoreboard.find(
-                (account) => account.Account === accountStat.account
+        // * batch upload type === "Campaign"
+        const accountStatsAirtableFormated = Airtable.formatRecords(
+            accountStatsRes.map((acc) => ({
+                Account: acc.account,
+                Client: acc.client,
+                Tag: acc.tag,
+                "Base ID": acc.baseID,
+                Leads: acc.leads,
+                Prospects: acc.prospects,
+                Type: "Campaign",
+            }))
+        );
+        await Airtable.batchUpload(LEAD_GEN_TRACKER, "Scoreboard", accountStatsAirtableFormated);
+
+        // * conslidate accounts by "Account"
+        let allAccounts = [];
+        accountStatsRes.forEach((account) => {
+            const foundAccount = allAccounts.find(
+                (allAccount) => allAccount?.account === account.account
             );
 
-            if (scoreboardRecord) {
-                await Airtable.updateRecord(LEAD_GEN_TRACKER, scoreboardRecord.recordID, {
-                    Prospects: accountStat.prospects,
-                    Leads: accountStat.leads,
+            if (foundAccount) {
+                allAccounts = allAccounts.map((acc) => {
+                    if (acc.account === foundAccount.account) {
+                        return {
+                            ...acc,
+                            leads: acc.leads + foundAccount.leads,
+                            prospects: Math.min(acc.prospects, foundAccount.prospects),
+                            tag: "",
+                        };
+                    }
+
+                    return acc;
                 });
+            } else {
+                allAccounts.push(account);
+            }
+        });
+
+        // * update or add account
+        for (let account of allAccounts) {
+            const foundScoreboardAccount = scoreboard.find(
+                (acc) => acc?.Account === account.account && acc.Type === "Account"
+            );
+
+            if (foundScoreboardAccount) {
+                // update account
+                await Airtable.updateRecord(LEAD_GEN_TRACKER, foundScoreboardAccount.recordID, {
+                    Prospects: account.prospects,
+                    Leads: account.leads,
+                });
+            } else {
+                const formatedRecord = Airtable.formatRecord({
+                    Account: account.account,
+                    Client: account.client,
+                    Tag: account.tag,
+                    "Base ID": account.baseID,
+                    Leads: account.leads,
+                    Prospects: account.prospects,
+                    Type: "Account",
+                });
+                // create account
+                await Airtable.createRecords(LEAD_GEN_TRACKER, "Scoreboard", [formatedRecord]);
             }
         }
     } catch (error) {

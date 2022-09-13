@@ -32,6 +32,8 @@ module.exports = async (account) => {
 
         return {
             id: account.recordID,
+            baseID: account["Base ID"],
+            client: account.Client,
             account: account.Account,
             tag: account.Tag || "",
             prospects: prospects.length || 0,

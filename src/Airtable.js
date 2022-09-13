@@ -78,6 +78,26 @@ class AirtableApi {
         }
     }
 
+    async allRecords(baseID, table) {
+        try {
+            const base = await this.config(baseID);
+
+            const res = await base(table).select().all();
+
+            const contacts = res.map((contact) => {
+                return {
+                    ...contact.fields,
+                    recordID: contact.getId(),
+                };
+            });
+
+            return contacts;
+        } catch (error) {
+            console.log(`ERROR allRecords(${baseID}) --- ${error}`);
+            return [];
+        }
+    }
+
     async batchUpload(baseID, table, records) {
         let allRecords = [];
 
@@ -130,6 +150,7 @@ class AirtableApi {
         }
     }
 
+    formatRecord = (record) => ({ fields: { ...record } });
     formatRecords = (records) => records.map((record) => ({ fields: { ...record } }));
 }
 

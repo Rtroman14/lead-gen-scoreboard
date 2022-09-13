@@ -7,11 +7,9 @@ const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
 
 (async () => {
     try {
-        let hotLeads = await Airtable.recordsInView("appCmYSLLMqsVtuur", "Prospects", "Hot Leads");
+        const Scoreboard = await Airtable.allRecords(LEAD_GEN_TRACKER, "Scoreboard");
 
-        hotLeads = hotLeads.filter((lead) => isThisWeek(new Date(lead["Response Date"])));
-
-        console.log(hotLeads.length);
+        console.log(Scoreboard.length);
     } catch (error) {
         console.log("ERROR - prospectsLeft() ---", error);
 

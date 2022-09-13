@@ -11,6 +11,11 @@ class Helpers {
         const map = new Map(kvArray);
         return Array.from(map.values());
     }
+
+    arrayDifference = (newArray, array, key) =>
+        newArray.filter(
+            ({ [key]: value1 }) => !array.some(({ [key]: value2 }) => value2 === value1)
+        );
 }
 
 module.exports = new Helpers();
