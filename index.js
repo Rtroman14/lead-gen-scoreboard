@@ -89,7 +89,6 @@ const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
                     Leads: account.leads,
                     Prospects: account.prospects,
                     Type: "Account",
-                    Status: "Live",
                 });
                 // create account
                 await Airtable.createRecords(LEAD_GEN_TRACKER, "Scoreboard", [formatedRecord]);
