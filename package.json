@@ -1,17 +1,17 @@
 {
-  "name": "lead-gen-scoreboard",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "airtable": "^0.11.4",
-    "date-fns": "^2.29.1",
-    "dotenv": "^16.0.1"
-  }
+    "name": "lead-gen-scoreboard",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "airtable": "^0.11.4",
+        "date-fns": "^2.29.1",
+        "dotenv": "^16.0.1"
+    }
 }

@@ -1,18 +1,7 @@
 const isThisWeek = require("date-fns/isThisWeek");
 
-const Airtable = require("./src/Airtable");
-const _ = require("./src/Helpers");
+let response = "2022-07-30T16:26:49.343Z";
 
-const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
+const result = isThisWeek(new Date(response));
 
-(async () => {
-    try {
-        const Scoreboard = await Airtable.allRecords(LEAD_GEN_TRACKER, "Scoreboard");
-
-        console.log(Scoreboard.length);
-    } catch (error) {
-        console.log("ERROR - prospectsLeft() ---", error);
-
-        return false;
-    }
-})();
+console.log(result);

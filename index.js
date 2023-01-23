@@ -2,16 +2,16 @@ const Airtable = require("./src/Airtable");
 const _ = require("./src/Helpers");
 const accountStats = require("./src/accountStats");
 
-const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
+const LEAD_GEN_TRACKER_BASE_ID = "appGB7S9Wknu6MiQb";
 
 (async () => {
     try {
         const workflowsReq = Airtable.recordsInView(
-            LEAD_GEN_TRACKER,
+            LEAD_GEN_TRACKER_BASE_ID,
             "Campaigns",
             "Text - workflow"
         );
-        const scoreboardReq = Airtable.allRecords(LEAD_GEN_TRACKER, "Scoreboard");
+        const scoreboardReq = Airtable.allRecords(LEAD_GEN_TRACKER_BASE_ID, "Scoreboard");
         let [workflows, scoreboard] = await Promise.all([workflowsReq, scoreboardReq]);
 
         workflows = workflows.filter((workflow) => workflow["Campaign Status"] !== "Paused");
@@ -21,12 +21,10 @@ const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
         const accountStatsReq = workflows.map((account) => accountStats(account));
         const accountStatsRes = await Promise.all(accountStatsReq);
 
-        // * batch delete type === "Campaign"
-        const scoreboardCampaignRecordIDs = scoreboard
-            .filter((record) => record.Type === "Campaign")
-            .map((record) => record.recordID);
+        // * batch delete all records
+        const scoreboardCampaignRecordIDs = scoreboard.map((record) => record.recordID);
         if (scoreboardCampaignRecordIDs.length) {
-            await Airtable.batchDelete(LEAD_GEN_TRACKER, scoreboardCampaignRecordIDs);
+            await Airtable.batchDelete(LEAD_GEN_TRACKER_BASE_ID, scoreboardCampaignRecordIDs);
         }
 
         // * batch upload type === "Campaign"
@@ -41,22 +39,49 @@ const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
                 Type: "Campaign",
             }))
         );
-        await Airtable.batchUpload(LEAD_GEN_TRACKER, "Scoreboard", accountStatsAirtableFormated);
+        await Airtable.batchUpload(
+            LEAD_GEN_TRACKER_BASE_ID,
+            "Scoreboard",
+            accountStatsAirtableFormated
+        );
 
         // * conslidate accounts by "Account"
-        let allAccounts = [];
-        accountStatsRes.forEach((account) => {
-            const foundAccount = allAccounts.find(
-                (allAccount) => allAccount?.account === account.account
-            );
+        // let allClients = [];
+        // accountStatsRes.forEach((account) => {
+        //     const foundClient = allClients.find(
+        //         (allAccount) => allAccount?.account === account.account
+        //     );
 
-            if (foundAccount) {
-                allAccounts = allAccounts.map((acc) => {
-                    if (acc.account === foundAccount.account) {
+        //     if (foundClient) {
+        //         allClients = allClients.map((acc) => {
+        //             if (acc.account === foundClient.account) {
+        //                 return {
+        //                     ...acc,
+        //                     leads: acc.leads + foundClient.leads,
+        //                     prospects: Math.min(acc.prospects, foundClient.prospects),
+        //                     tag: "",
+        //                 };
+        //             }
+
+        //             return acc;
+        //         });
+        //     } else {
+        //         allClients.push(account);
+        //     }
+        // });
+
+        // * conslidate accounts by "Client"
+        let allClients = [];
+        accountStatsRes.forEach((account) => {
+            const foundClient = allClients.find((client) => client?.client === account.client);
+
+            if (foundClient) {
+                allClients = allClients.map((acc) => {
+                    if (acc.client === account.client) {
                         return {
-                            ...acc,
-                            leads: acc.leads + foundAccount.leads,
-                            prospects: Math.min(acc.prospects, foundAccount.prospects),
+                            ...account,
+                            leads: acc.leads + account.leads,
+                            prospects: Math.min(acc.prospects, account.prospects),
                             tag: "",
                         };
                     }
@@ -64,36 +89,23 @@ const LEAD_GEN_TRACKER = "appGB7S9Wknu6MiQb";
                     return acc;
                 });
             } else {
-                allAccounts.push(account);
+                allClients.push(account);
             }
         });
 
-        // * update or add account
-        for (let account of allAccounts) {
-            const foundScoreboardAccount = scoreboard.find(
-                (acc) => acc?.Account === account.account && acc.Type === "Account"
-            );
-
-            if (foundScoreboardAccount) {
-                // update account
-                await Airtable.updateRecord(LEAD_GEN_TRACKER, foundScoreboardAccount.recordID, {
-                    Prospects: account.prospects,
-                    Leads: account.leads,
-                });
-            } else {
-                const formatedRecord = Airtable.formatRecord({
-                    Account: account.account,
-                    Client: account.client,
-                    Tag: account.tag,
-                    "Base ID": account.baseID,
-                    Leads: account.leads,
-                    Prospects: account.prospects,
-                    Type: "Account",
-                });
-                // create account
-                await Airtable.createRecords(LEAD_GEN_TRACKER, "Scoreboard", [formatedRecord]);
-            }
-        }
+        // * batch upload type === "Account"
+        const clientAccounts = Airtable.formatRecords(
+            allClients.map((acc) => ({
+                Account: acc.account,
+                Client: acc.client,
+                Tag: "",
+                "Base ID": acc.baseID,
+                Leads: acc.leads,
+                Prospects: acc.prospects,
+                Type: "Account",
+            }))
+        );
+        await Airtable.batchUpload(LEAD_GEN_TRACKER_BASE_ID, "Scoreboard", clientAccounts);
     } catch (error) {
         console.log("ERROR - index.js ---", error);
     }

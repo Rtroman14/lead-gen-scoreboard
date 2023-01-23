@@ -1,0 +1,28 @@
+PROJECT_ID = plenary-atrium-361021
+JOB_NAME = lead-gen-scoreboard
+
+STEPS:
+
+1. - Build the code into a container image and push it to a registry:
+gcloud builds submit --pack image=gcr.io/plenary-atrium-361021/lead-gen-scoreboard
+
+2. - Create a job using the container you just built:
+gcloud beta run jobs create lead-gen-scoreboard \
+    --image gcr.io/plenary-atrium-361021/lead-gen-scoreboard \
+    --tasks 1 \
+    --max-retries 0 \
+    --task-timeout=300 \
+    --region us-central1 \
+    --set-env-vars AIRTABLE_API_KEY=key2tZxeaXDfyBJ9k \
+
+3. - Create schedule
+0 8 * * 1-5
+0 11 * * 1-5
+0 15 * * 1-5
+
+
+NOTES:
+ - Execute a job in Cloud Run:
+    gcloud beta run jobs execute lead-gen-scoreboard
+ - Update an existing job:
+    gcloud beta run jobs update lead-gen-scoreboard

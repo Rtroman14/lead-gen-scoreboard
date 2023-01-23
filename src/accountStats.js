@@ -12,14 +12,18 @@ module.exports = async (account) => {
 
         let hotLeads = await Airtable.recordsInView(account["Base ID"], "Prospects", "Hot Leads");
 
-        if (account.Client === "Roper Roofing" || account.Client === "Eco Tec") {
-            moreHotLeads = await Airtable.recordsInView(
+        if (
+            account.Client === "Roper Roofing" ||
+            account.Client === "Eco Tec" ||
+            account.Client === "Integrity Pro Roofing"
+        ) {
+            const inJobNimbusLeads = await Airtable.recordsInView(
                 account["Base ID"],
                 "Prospects",
                 "In JobNimbus"
             );
 
-            hotLeads = [...hotLeads, ...moreHotLeads];
+            hotLeads = [...hotLeads, ...inJobNimbusLeads];
         }
 
         if ("Tag" in account) {
