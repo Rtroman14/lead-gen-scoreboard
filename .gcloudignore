@@ -1,12 +1,7 @@
+node_modules
 .git
 .gitignore
-
-node_modules
-
 .env*
-
-deploy.txt
-
 .DS_Store
-
 .vscode
+deploy.txt
