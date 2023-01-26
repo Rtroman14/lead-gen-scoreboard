@@ -14,7 +14,11 @@ const LEAD_GEN_TRACKER_BASE_ID = "appGB7S9Wknu6MiQb";
         const scoreboardReq = Airtable.allRecords(LEAD_GEN_TRACKER_BASE_ID, "Scoreboard");
         let [workflows, scoreboard] = await Promise.all([workflowsReq, scoreboardReq]);
 
-        workflows = workflows.filter((workflow) => workflow["Campaign Status"] !== "Paused");
+        workflows = workflows.filter(
+            (workflow) =>
+                workflow["Campaign Status"] === "Live" ||
+                workflow["Campaign Status"] === "Need More Contacts"
+        );
         workflows = _.uniqueArrayOfObjects(workflows, ["Account", "Tag"]);
 
         // * get all account stats
